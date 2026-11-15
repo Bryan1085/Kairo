@@ -1,0 +1,317 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny all by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function userExists(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
+    }
+
+    // --- Validation Blueprints ---
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+          'uid', 'email', 'displayName', 'defaultReminderMinutes',
+          'alarmSoundEnabled', 'whatsappAutoSendEnabled', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'defaultReminderMinutes',
+          'alarmSoundEnabled', 'whatsappAutoSendEnabled', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.uid == request.auth.uid
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.defaultReminderMinutes is int && data.defaultReminderMinutes >= 0 && data.defaultReminderMinutes <= 1440
+        && data.alarmSoundEnabled is bool
+        && data.whatsappAutoSendEnabled is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCalendarEvent(data) {
+      return data.keys().hasAll([
+          'userId', 'title', 'description', 'date', 'startTime', 'endTime',
+          'location', 'isImportant', 'reminderMinutes', 'alarmDismissed',
+          'contactId', 'contactName', 'whatsappReminderEnabled',
+          'whatsappConfirmationSent', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'title', 'description', 'date', 'startTime', 'endTime',
+          'location', 'isImportant', 'reminderMinutes', 'alarmDismissed',
+          'contactId', 'contactName', 'whatsappReminderEnabled',
+          'whatsappConfirmationSent', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.description is string && data.description.size() <= 1000
+        && data.date is string && data.date.size() == 10 && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.startTime is string && data.startTime.size() == 5 && data.startTime.matches('^([01]\\d|2[0-3]):[0-5]\\d$')
+        && data.endTime is string && data.endTime.size() == 5 && data.endTime.matches('^([01]\\d|2[0-3]):[0-5]\\d$')
+        && data.location is string && data.location.size() <= 200
+        && data.isImportant is bool
+        && data.reminderMinutes is int && data.reminderMinutes >= 0 && data.reminderMinutes <= 1440
+        && data.alarmDismissed is bool
+        && data.contactId is string && data.contactId.size() <= 128
+        && data.contactName is string && data.contactName.size() <= 120
+        && data.whatsappReminderEnabled is bool
+        && data.whatsappConfirmationSent is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDailyTask(data) {
+      return data.keys().hasAll([
+          'userId', 'title', 'notes', 'dueDate', 'priority', 'quadrant',
+          'estimatedMinutes', 'orderIndex', 'completed', 'aiReason',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'title', 'notes', 'dueDate', 'priority', 'quadrant',
+          'estimatedMinutes', 'orderIndex', 'completed', 'aiReason',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.notes is string && data.notes.size() <= 1000
+        && data.dueDate is string && data.dueDate.size() == 10 && data.dueDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.priority in ['alta', 'media', 'baja']
+        && data.quadrant in ['hacer_ya', 'planificar', 'delegar', 'eliminar']
+        && data.estimatedMinutes is int && data.estimatedMinutes >= 1 && data.estimatedMinutes <= 1440
+        && data.orderIndex is int && data.orderIndex >= 0 && data.orderIndex <= 10000
+        && data.completed is bool
+        && data.aiReason is string && data.aiReason.size() <= 400
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidContact(data) {
+      return data.keys().hasAll([
+          'userId', 'name', 'phone', 'email', 'role', 'category', 'notes',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'name', 'phone', 'email', 'role', 'category', 'notes',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && data.phone is string && data.phone.size() >= 7 && data.phone.size() <= 24 && data.phone.matches('^\\+?[0-9\\s\\-()]{7,24}$')
+        && data.email is string && data.email.size() <= 254
+        && data.role is string && data.role.size() <= 120
+        && data.category in ['trabajo', 'cliente', 'personal', 'familia']
+        && data.notes is string && data.notes.size() <= 1000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidQuickNote(data) {
+      return data.keys().hasAll([
+          'userId', 'title', 'content', 'rawText', 'folder', 'tags',
+          'pinned', 'isOrganized', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'title', 'content', 'rawText', 'folder', 'tags',
+          'pinned', 'isOrganized', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.content is string && data.content.size() <= 8000
+        && data.rawText is string && data.rawText.size() <= 4000
+        && data.folder in ['general', 'reuniones', 'ideas', 'pendientes']
+        && data.tags is list && data.tags.size() <= 8
+        && (data.tags.size() == 0 || (data.tags[0] is string && data.tags[0].size() <= 40))
+        && data.pinned is bool
+        && data.isOrganized is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+      allow create: if isVerifiedUser()
+        && isOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'displayName', 'defaultReminderMinutes', 'alarmSoundEnabled',
+            'whatsappAutoSendEnabled', 'updatedAt'
+          ])
+        );
+      allow delete: if false;
+
+      match /events/{eventId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(eventId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isVerifiedUser()
+          && isOwner(userId)
+          && isValidId(userId)
+          && isValidId(eventId)
+          && isValidCalendarEvent(incoming())
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && userExists(userId);
+        allow update: if isVerifiedUser()
+          && isOwner(userId)
+          && isValidId(userId)
+          && isValidId(eventId)
+          && isValidCalendarEvent(incoming())
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'alarmDismissed', 'updatedAt'
+            ])
+            || incoming().diff(existing()).affectedKeys().hasOnly([
+              'whatsappConfirmationSent', 'updatedAt'
+            ])
+            || incoming().diff(existing()).affectedKeys().hasOnly([
+              'title', 'description', 'date', 'startTime', 'endTime',
+              'location', 'isImportant', 'reminderMinutes', 'alarmDismissed',
+              'contactId', 'contactName', 'whatsappReminderEnabled',
+              'whatsappConfirmationSent', 'updatedAt'
+            ])
+          );
+        allow delete: if isVerifiedUser() && isOwner(userId) && isValidId(userId) && isValidId(eventId);
+      }
+
+      match /tasks/{taskId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(taskId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isVerifiedUser()
+          && isOwner(userId)
+          && isValidId(userId)
+          && isValidId(taskId)
+          && isValidDailyTask(incoming())
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && userExists(userId);
+        allow update: if isVerifiedUser()
+          && isOwner(userId)
+          && isValidId(userId)
+          && isValidId(taskId)
+          && isValidDailyTask(incoming())
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'completed', 'updatedAt'
+            ])
+            || incoming().diff(existing()).affectedKeys().hasOnly([
+              'priority', 'quadrant', 'orderIndex', 'aiReason', 'updatedAt'
+            ])
+            || incoming().diff(existing()).affectedKeys().hasOnly([
+              'title', 'notes', 'dueDate', 'priority', 'quadrant',
+              'estimatedMinutes', 'orderIndex', 'completed', 'aiReason', 'updatedAt'
+            ])
+          );
+        allow delete: if isVerifiedUser() && isOwner(userId) && isValidId(userId) && isValidId(taskId);
+      }
+
+      match /contacts/{contactId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(contactId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isVerifiedUser()
+          && isOwner(userId)
+          && isValidId(userId)
+          && isValidId(contactId)
+          && isValidContact(incoming())
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && userExists(userId);
+        allow update: if isVerifiedUser()
+          && isOwner(userId)
+          && isValidId(userId)
+          && isValidId(contactId)
+          && isValidContact(incoming())
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'phone', 'email', 'role', 'category', 'notes', 'updatedAt'
+          ]);
+        allow delete: if isVerifiedUser() && isOwner(userId) && isValidId(userId) && isValidId(contactId);
+      }
+
+      match /notes/{noteId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(noteId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isVerifiedUser()
+          && isOwner(userId)
+          && isValidId(userId)
+          && isValidId(noteId)
+          && isValidQuickNote(incoming())
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && userExists(userId);
+        allow update: if isVerifiedUser()
+          && isOwner(userId)
+          && isValidId(userId)
+          && isValidId(noteId)
+          && isValidQuickNote(incoming())
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'pinned', 'updatedAt'
+            ])
+            || incoming().diff(existing()).affectedKeys().hasOnly([
+              'title', 'content', 'folder', 'tags', 'isOrganized', 'updatedAt'
+            ])
+            || incoming().diff(existing()).affectedKeys().hasOnly([
+              'title', 'content', 'rawText', 'folder', 'tags',
+              'pinned', 'isOrganized', 'updatedAt'
+            ])
+          );
+        allow delete: if isVerifiedUser() && isOwner(userId) && isValidId(userId) && isValidId(noteId);
+      }
+    }
+  }
+}

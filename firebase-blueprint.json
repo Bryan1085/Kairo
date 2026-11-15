@@ -1,0 +1,424 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private profile and assistant preferences for the authenticated user.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the user."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 254,
+          "description": "Verified email address of the user."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Display name shown in the workspace."
+        },
+        "defaultReminderMinutes": {
+          "type": "integer",
+          "description": "Default minutes before an event to trigger an alarm."
+        },
+        "alarmSoundEnabled": {
+          "type": "boolean",
+          "description": "Whether audible Web Audio alarm chimes are enabled."
+        },
+        "whatsappAutoSendEnabled": {
+          "type": "boolean",
+          "description": "Whether 1-day-before appointment confirmations should be sent automatically via linked WhatsApp."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last update timestamp."
+        }
+      },
+      "required": [
+        "uid",
+        "email",
+        "displayName",
+        "defaultReminderMinutes",
+        "alarmSoundEnabled",
+        "whatsappAutoSendEnabled",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CalendarEvent": {
+      "title": "CalendarEvent",
+      "description": "A scheduled appointment or calendar event with alarm configuration.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner user UID."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "description": "Title of the appointment."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Optional appointment details."
+        },
+        "date": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Event date in YYYY-MM-DD format."
+        },
+        "startTime": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 5,
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "description": "Start time in HH:MM 24h format."
+        },
+        "endTime": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 5,
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "description": "End time in HH:MM 24h format."
+        },
+        "location": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Meeting place or video link."
+        },
+        "isImportant": {
+          "type": "boolean",
+          "description": "Marks appointment as high importance for urgent alarm."
+        },
+        "reminderMinutes": {
+          "type": "integer",
+          "description": "Minutes before startTime to trigger the alarm (0 to 1440)."
+        },
+        "alarmDismissed": {
+          "type": "boolean",
+          "description": "Whether the user has dismissed the alarm for this event."
+        },
+        "contactId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Optional linked contact document ID."
+        },
+        "contactName": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Optional cached contact display name."
+        },
+        "whatsappReminderEnabled": {
+          "type": "boolean",
+          "description": "Whether to notify 1 day before via WhatsApp to confirm attendance."
+        },
+        "whatsappConfirmationSent": {
+          "type": "boolean",
+          "description": "Whether the 1-day-before WhatsApp confirmation has been sent."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "userId",
+        "title",
+        "description",
+        "date",
+        "startTime",
+        "endTime",
+        "location",
+        "isImportant",
+        "reminderMinutes",
+        "alarmDismissed",
+        "contactId",
+        "contactName",
+        "whatsappReminderEnabled",
+        "whatsappConfirmationSent",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DailyTask": {
+      "title": "DailyTask",
+      "description": "Prioritized daily task with Eisenhower quadrant and AI rationale.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner user UID."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Task headline."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Task context or execution notes."
+        },
+        "dueDate": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Target date in YYYY-MM-DD format."
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["alta", "media", "baja"],
+          "description": "Task priority tier."
+        },
+        "quadrant": {
+          "type": "string",
+          "enum": ["hacer_ya", "planificar", "delegar", "eliminar"],
+          "description": "Eisenhower prioritization quadrant."
+        },
+        "estimatedMinutes": {
+          "type": "integer",
+          "description": "Estimated effort in minutes."
+        },
+        "orderIndex": {
+          "type": "integer",
+          "description": "Manual or AI-assigned daily execution order."
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Completion state."
+        },
+        "aiReason": {
+          "type": "string",
+          "maxLength": 400,
+          "description": "Optional rationale generated by AI prioritization."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "userId",
+        "title",
+        "notes",
+        "dueDate",
+        "priority",
+        "quadrant",
+        "estimatedMinutes",
+        "orderIndex",
+        "completed",
+        "aiReason",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Contact": {
+      "title": "Contact",
+      "description": "Personal or business contact with WhatsApp-compatible phone number.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner user UID."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Full contact name."
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 7,
+          "maxLength": 24,
+          "pattern": "^\\+?[0-9\\s\\-()]{7,24}$",
+          "description": "Phone number including country code for WhatsApp."
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 254,
+          "description": "Optional email address."
+        },
+        "role": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Company, role, or relationship."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["trabajo", "cliente", "personal", "familia"],
+          "description": "Contact group category."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Personal notes about this contact."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "phone",
+        "email",
+        "role",
+        "category",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "QuickNote": {
+      "title": "QuickNote",
+      "description": "Rapidly captured note that can be structured and categorized by AI.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner user UID."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "description": "Structured note title."
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 8000,
+          "description": "Organized note body."
+        },
+        "rawText": {
+          "type": "string",
+          "maxLength": 4000,
+          "description": "Original raw captured text."
+        },
+        "folder": {
+          "type": "string",
+          "enum": ["general", "reuniones", "ideas", "pendientes"],
+          "description": "Organizational folder."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Up to 8 short string tags."
+        },
+        "pinned": {
+          "type": "boolean",
+          "description": "Whether the note is pinned to the top."
+        },
+        "isOrganized": {
+          "type": "boolean",
+          "description": "Whether AI organization has been applied."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "userId",
+        "title",
+        "content",
+        "rawText",
+        "folder",
+        "tags",
+        "pinned",
+        "isOrganized",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Private user profile and alarm settings document."
+    },
+    "/users/{userId}/events/{eventId}": {
+      "schema": {
+        "$ref": "#/entities/CalendarEvent"
+      },
+      "description": "User's scheduled calendar events and appointments."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": {
+        "$ref": "#/entities/DailyTask"
+      },
+      "description": "User's prioritized daily tasks."
+    },
+    "/users/{userId}/contacts/{contactId}": {
+      "schema": {
+        "$ref": "#/entities/Contact"
+      },
+      "description": "User's saved contacts with WhatsApp phone numbers."
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": {
+        "$ref": "#/entities/QuickNote"
+      },
+      "description": "User's quick and organized notes."
+    }
+  }
+}

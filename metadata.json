@@ -1,0 +1,10 @@
+{
+  "name": "Kairo — Asistente Personal",
+  "description": "Asistente personal ejecutivo para gestionar calendario, priorizar tareas diarias, guardar contactos con WhatsApp, alarmas de citas y notas rápidas.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
